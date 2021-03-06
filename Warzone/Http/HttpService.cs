@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,9 +11,19 @@ namespace Warzone.Http
     {
         private static HttpClient _httpClient;
 
-        public HttpService()
+        private readonly string _baseCookie;
+            
+
+        private const string UserAgent = "a4b471be-4ad2-47e2-ba0e-e1f2aa04bff9";
+
+        public HttpService(string baseCookie)
         {
             _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Add("Cookie", baseCookie);
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+            _httpClient.DefaultRequestHeaders.Add("X-Requested-With", UserAgent);
+            _httpClient.DefaultRequestHeaders.Add("Accept", "application/json, text/javascript, */*; q=0.01");
+            _httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
         }
 
         public async Task<HttpResponse<T>> GetAsync<T>(string resourceUrl, CancellationToken? cancellationToken = null)
@@ -57,7 +68,7 @@ namespace Warzone.Http
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode || (int)response.StatusCode == 0)
             {
                 return new HttpResponse<TResponse>
                 {
@@ -81,13 +92,21 @@ namespace Warzone.Http
             };
         }
 
+        public void UpdateDefaultHeaders(string key, string value)
+        {
+            _httpClient.DefaultRequestHeaders.Add(key, value);
+        }
+
         private static T DeserializeResponseFromApi<T>(string responseContents) where T : class
         {
             T deserializedResponse;
 
             try
             {
-                deserializedResponse = JsonSerializer.Deserialize<T>(responseContents);
+                deserializedResponse = JsonSerializer.Deserialize<T>(responseContents, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
             }
             catch (JsonException)
             {

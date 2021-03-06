@@ -2,63 +2,91 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Mime;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Warzone.Http;
+using Warzone.Models;
 
 namespace Warzone.Authentication
 {
     public class AuthenticationHandler : IAuthenticationHandler
     {
-        private const string TokenUrl = "https://profile.callofduty.com/cod/login";
-        private const string LoginUrl = "https://profile.callofduty.com/do_login?new_SiteId=co";
+        private const string BaseLoginUrl = "https://profile.callofduty.com/cod/mapp/";
         private readonly IHttpService _httpService;
+        private readonly string _baseCookie;
         private string _email;
         private string _password;
-        
-        public AuthenticationHandler(IHttpService httpService)
+
+        public AuthenticationHandler(IHttpService httpService, string baseCookie)
         {
             _httpService = httpService;
+            _baseCookie = baseCookie;
         }
 
         public bool LoggedIn => !string.IsNullOrEmpty(_email) && !string.IsNullOrEmpty(_password);
-        
+
         public async Task<bool> LoginAsync(string email, string password, CancellationToken? cancellationToken = null)
         {
-            if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(email));
-            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(email));
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(email));
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(email));
 
-            var xsrfToken = await GetXsrfTokenAsync(cancellationToken);
-            var loginDict = new Dictionary<string, string>
-            {
-                { "Cookie: ", $"XSRF_TOKEN={xsrfToken}"},
-                { "username",  email},
-                { "password", password},
-                { "remember_me", "true" },
-                { "_csrf", xsrfToken }
-            };
-            
-            var content = new FormUrlEncodedContent(loginDict);
+            var (deviceId, deviceIdJson) = GetDeviceId();
+            var initialResponse = await _httpService.PostAsync<DeviceResponse>($"{BaseLoginUrl}registerDevice",
+                new StringContent(deviceIdJson, Encoding.UTF8, MediaTypeNames.Application.Json), cancellationToken);
 
-            var loginResponse = await _httpService.PostAsync<object>(LoginUrl, content, cancellationToken);
+            if (!initialResponse.Content.InitialLoginSuccessful || !initialResponse.Success) return false;
+
+            _httpService.UpdateDefaultHeaders("Authorization", $"bearer {initialResponse.Content.Data.AuthHeader}");
+            _httpService.UpdateDefaultHeaders("x_cod_device_id", deviceId);
+
+            var loginResponse =
+                await _httpService.PostAsync<LoginResponse>($"{BaseLoginUrl}login", GetLoginContent(email, password),
+                    cancellationToken);
+
+            if (!(loginResponse.Success && loginResponse.Content.Success)) return false;
+
+            _email = email;
+            _password = password;
+
+            var data = loginResponse.Content;
+            var cookie = $"{_baseCookie}rtkn=${data.RToken};ACT_SSO_COOKIE=${data.SsoCookie};atkn=${data.AToken};";
+
+            _httpService.UpdateDefaultHeaders("Cookie", cookie);
 
             return loginResponse.Success;
         }
 
-        private async Task<string> GetXsrfTokenAsync(CancellationToken? cancellationToken)
+        private static StringContent GetLoginContent(string email, string password) =>
+            new(JsonSerializer.Serialize(new {email, password}), Encoding.UTF8,
+                MediaTypeNames.Application.Json);
+
+        private static (string, string) GetDeviceId()
         {
-            var tokenResponse = await _httpService.GetAsync<string>(TokenUrl, cancellationToken);
-            var (_, value) = tokenResponse.Headers.FirstOrDefault(h => h.Key == "Set-Cookie");
-            var cookieValue = value.FirstOrDefault(v => v.Contains("XSRF-TOKEN"));
-            return ParseCookie(cookieValue);
+            var randomId = GetUniqId();
+
+            using var md5 = MD5.Create();
+            var deviceId = string.Join(string.Empty,
+                md5.ComputeHash(Encoding.UTF8.GetBytes(randomId)).Select(b => b.ToString("x2")));
+
+            return (deviceId, JsonSerializer.Serialize(new {deviceId}));
         }
-        
-        private string ParseCookie(string cookieValue)
+
+        private static string GetUniqId()
         {
-            var regex = new Regex("(XSRF-TOKEN=|;)");
-            var cookieStrings = regex.Split(cookieValue.Trim());
-            return cookieStrings[2];
+            var ts = DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0);
+            var t = ts.TotalMilliseconds / 1000;
+
+            var a = (int) Math.Floor(t);
+            var b = (int) ((t - Math.Floor(t)) * 1000000);
+
+            return a.ToString("x8") + b.ToString("x5");
         }
     }
 }

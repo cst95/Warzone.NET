@@ -12,5 +12,7 @@ namespace Warzone.Http
 
         Task<HttpResponse<TResponse>> PostAsync<TResponse>(string resourceUrl, HttpContent content,
             CancellationToken? cancellationToken) where TResponse : class;
+
+        void UpdateDefaultHeaders(string key, string value);
     }
 }
