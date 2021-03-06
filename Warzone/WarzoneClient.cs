@@ -14,8 +14,8 @@ namespace Warzone
         public WarzoneClient()
         {
             var httpService = new HttpService();
-            _authenticationHandler = new AuthenticationHandler(httpService);
-            _codApiClient = new CodApiClient(_authenticationHandler, httpService);
+            _codApiClient = new CodApiClient(httpService);
+            _authenticationHandler = new AuthenticationHandler(_codApiClient);
         }
 
         public Task<bool> LoginAsync(string email, string password) =>

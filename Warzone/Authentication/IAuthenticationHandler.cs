@@ -6,7 +6,6 @@ namespace Warzone.Authentication
     public interface IAuthenticationHandler
     {
         Task<bool> LoginAsync(string email, string password, CancellationToken? cancellationToken = null);
-        Task LogoutAsync();
         bool LoggedIn { get; }
     }
 }

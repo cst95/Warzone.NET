@@ -1,31 +1,55 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Warzone.Authentication;
 using Warzone.Constants;
-using Warzone.Exceptions;
 using Warzone.Http;
 
 namespace Warzone.Clients
 {
     public class CodApiClient : ICodApiClient
     {
-        private readonly IAuthenticationHandler _authenticationHandler;
         private readonly IHttpService _httpService;
         private const string BaseUrl = "https://my.callofduty.com/api/papi-client/";
+        private const string LoginUrl = "https://profile.callofduty.com/do_login?new_SiteId=cod";
+        private const string CsrfTokenUrl = "https://profile.callofduty.com/cod/login";
 
-        public CodApiClient(IAuthenticationHandler authenticationHandler, IHttpService httpService)
+        public CodApiClient(IHttpService httpService)
         {
-            _authenticationHandler = authenticationHandler;
             _httpService = httpService;
+        }
+
+        public async Task<string> FetchXsrfTokenAsync(CancellationToken? cancellationToken = null)
+        {
+            var initialResponse = await _httpService.GetAsync<object>(CsrfTokenUrl, null, cancellationToken);
+
+            return !initialResponse.Success ? null : ParseXsrfTokenFromHeaders(initialResponse.Headers);
+        }
+
+        public async Task<bool> LoginAsync(string email, string password, string xsrfToken,
+            CancellationToken? cancellationToken = null)
+        {
+            var loginResponse = await _httpService.PostAsync<object>(LoginUrl,
+                GetLoginContent(email, password, xsrfToken),
+                new Dictionary<string, string>() {{"Cookie", $"XSRF-TOKEN={xsrfToken}"}}, cancellationToken);
+
+            if (!loginResponse.Success) return false;
+
+            var (_, value) = loginResponse.Headers.First(f => f.Key == "Set-Cookie");
+
+            _httpService.UpdateDefaultHeaders("Cookie", value);
+
+            return true;
         }
 
         public async Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
             CancellationToken? cancellationToken)
         {
-            if (!_authenticationHandler.LoggedIn)
-                throw new NotLoggedInException();
             if (!Platforms.IsValid(platform))
                 throw new ArgumentOutOfRangeException(nameof(platform));
             if (string.IsNullOrWhiteSpace(playerName))
@@ -34,11 +58,29 @@ namespace Warzone.Clients
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(platform));
 
             var safePlayerName = HttpUtility.HtmlEncode(playerName);
-            var url = $"{BaseUrl}crm/cod/{Versions.V2}/title/{Titles.Warzone}/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/0/end/0/details";
+            var url =
+                $"{BaseUrl}crm/cod/{Versions.V2}/title/{Titles.Warzone}/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/0/end/0/details";
 
             var response = await _httpService.GetAsync<object>(url, null, cancellationToken);
 
             return response;
         }
+
+        private static string ParseXsrfTokenFromHeaders(HttpResponseHeaders headers)
+        {
+            var xsrfHeader = headers.First(h => h.Key.Equals("Set-Cookie")).Value.First(v => v.Contains("XSRF-TOKEN"));
+            var regex = new Regex("(XSRF-TOKEN=|;)");
+            var cookieStrings = regex.Split(xsrfHeader.Trim());
+            return cookieStrings[2];
+        }
+
+        private static FormUrlEncodedContent GetLoginContent(string email, string password, string token) =>
+            new(new Dictionary<string, string>()
+            {
+                {"username", email},
+                {"password", password},
+                {"remember_me", "true"},
+                {"_csrf", token},
+            });
     }
 }
