@@ -14,5 +14,6 @@ namespace Warzone.Http
             CancellationToken? cancellationToken) where TResponse : class;
 
         void UpdateDefaultHeaders(string key, string value);
+        void ResetDefaultHeaders();
     }
 }

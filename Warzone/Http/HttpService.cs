@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -11,19 +11,21 @@ namespace Warzone.Http
     {
         private static HttpClient _httpClient;
 
-        private readonly string _baseCookie;
-            
+        private readonly Dictionary<string, string> _baseHeaders;
 
-        private const string UserAgent = "a4b471be-4ad2-47e2-ba0e-e1f2aa04bff9";
-
-        public HttpService(string baseCookie)
+        public HttpService(string baseCookie, string userAgent)
         {
             _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("Cookie", baseCookie);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgent);
-            _httpClient.DefaultRequestHeaders.Add("X-Requested-With", UserAgent);
-            _httpClient.DefaultRequestHeaders.Add("Accept", "application/json, text/javascript, */*; q=0.01");
-            _httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
+            _baseHeaders = new Dictionary<string, string>()
+            {
+                {"Cookie", baseCookie},
+                {"User-Agent", userAgent},
+                {"X-Requested-With", userAgent},
+                {"Accept", "application/json, text/javascript, */*; q=0.01"},
+                {"Connection", "keep-alive"}
+            };
+
+            ResetDefaultHeaders();
         }
 
         public async Task<HttpResponse<T>> GetAsync<T>(string resourceUrl, CancellationToken? cancellationToken = null)
@@ -68,7 +70,7 @@ namespace Warzone.Http
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode || (int)response.StatusCode == 0)
+            if (!response.IsSuccessStatusCode || (int) response.StatusCode == 0)
             {
                 return new HttpResponse<TResponse>
                 {
@@ -92,8 +94,17 @@ namespace Warzone.Http
             };
         }
 
+        public void ResetDefaultHeaders()
+        {
+            foreach (var (key, val) in _baseHeaders)
+            {
+                UpdateDefaultHeaders(key, val);
+            }
+        }
+
         public void UpdateDefaultHeaders(string key, string value)
         {
+            _httpClient.DefaultRequestHeaders.Remove(key);
             _httpClient.DefaultRequestHeaders.Add(key, value);
         }
 

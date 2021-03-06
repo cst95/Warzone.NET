@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Warzone.Exceptions;
 using Warzone.Http;
 using Warzone.Models;
 
@@ -32,6 +33,8 @@ namespace Warzone.Authentication
 
         public async Task<bool> LoginAsync(string email, string password, CancellationToken? cancellationToken = null)
         {
+            if (LoggedIn) throw new AlreadyLoggedInException();
+            
             if (string.IsNullOrWhiteSpace(email))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(email));
             if (string.IsNullOrWhiteSpace(password))
@@ -61,6 +64,17 @@ namespace Warzone.Authentication
             _httpService.UpdateDefaultHeaders("Cookie", cookie);
 
             return loginResponse.Success;
+        }
+        
+        public Task LogoutAsync()
+        {
+            if (!LoggedIn) throw new NotLoggedInException();
+
+            _email = null;
+            _password = null;
+            _httpService.ResetDefaultHeaders();
+            
+            return Task.CompletedTask;
         }
 
         private static StringContent GetLoginContent(string email, string password) =>
