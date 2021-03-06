@@ -1,13 +1,11 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace Warzone
+namespace Warzone.Clients
 {
-    public interface IWarzoneClient
+    public interface ICodApiClient
     {
         Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
             CancellationToken? cancellationToken);
-
-        Task<bool> LoginAsync(string email, string password);
     }
 }

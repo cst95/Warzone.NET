@@ -13,25 +13,34 @@ namespace Warzone.Http
 
         private readonly Dictionary<string, string> _baseHeaders;
 
-        public HttpService(string baseCookie, string userAgent)
+        public HttpService()
         {
             _httpClient = new HttpClient();
             _baseHeaders = new Dictionary<string, string>()
             {
-                {"Cookie", baseCookie},
-                {"User-Agent", userAgent},
-                {"X-Requested-With", userAgent},
-                {"Accept", "application/json, text/javascript, */*; q=0.01"},
+                {
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.190 Safari/537.36"
+                },
+                {
+                    "X-Requested-With",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.190 Safari/537.36"
+                },
+                {"Accept", "application/json"},
                 {"Connection", "keep-alive"}
             };
 
             ResetDefaultHeaders();
         }
 
-        public async Task<HttpResponse<T>> GetAsync<T>(string resourceUrl, CancellationToken? cancellationToken = null)
+        public async Task<HttpResponse<T>> GetAsync<T>(string resourceUrl,
+            Dictionary<string, string> headersToAdd = null, CancellationToken? cancellationToken = null)
             where T : class
         {
             var request = new HttpRequestMessage(HttpMethod.Get, resourceUrl);
+
+            if (headersToAdd != null) AddHeaders(request, headersToAdd);
+
             var response = cancellationToken.HasValue
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
@@ -63,14 +72,18 @@ namespace Warzone.Http
         }
 
         public async Task<HttpResponse<TResponse>> PostAsync<TResponse>(string resourceUrl, HttpContent content,
-            CancellationToken? cancellationToken) where TResponse : class
+            Dictionary<string, string> headersToAdd = null,
+            CancellationToken? cancellationToken = null) where TResponse : class
         {
             var request = new HttpRequestMessage(HttpMethod.Post, resourceUrl) {Content = content};
+
+            if (headersToAdd != null) AddHeaders(request, headersToAdd);
+
             var response = cancellationToken.HasValue
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode || (int) response.StatusCode == 0)
+            if (!response.IsSuccessStatusCode && (int)response.StatusCode != 302)
             {
                 return new HttpResponse<TResponse>
                 {
@@ -96,6 +109,8 @@ namespace Warzone.Http
 
         public void ResetDefaultHeaders()
         {
+            _httpClient.DefaultRequestHeaders.Remove("Cookie");
+
             foreach (var (key, val) in _baseHeaders)
             {
                 UpdateDefaultHeaders(key, val);
@@ -106,6 +121,20 @@ namespace Warzone.Http
         {
             _httpClient.DefaultRequestHeaders.Remove(key);
             _httpClient.DefaultRequestHeaders.Add(key, value);
+        }
+        
+        public void UpdateDefaultHeaders(string key, IEnumerable<string> value)
+        {
+            _httpClient.DefaultRequestHeaders.Remove(key);
+            _httpClient.DefaultRequestHeaders.Add(key, value);
+        }
+
+        private void AddHeaders(HttpRequestMessage request, Dictionary<string, string> headersToAdd)
+        {
+            foreach (var (key, value) in headersToAdd)
+            {
+                request.Headers.Add(key, value);
+            }
         }
 
         private static T DeserializeResponseFromApi<T>(string responseContents) where T : class

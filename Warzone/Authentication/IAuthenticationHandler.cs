@@ -7,5 +7,6 @@ namespace Warzone.Authentication
     {
         Task<bool> LoginAsync(string email, string password, CancellationToken? cancellationToken = null);
         Task LogoutAsync();
+        bool LoggedIn { get; }
     }
 }

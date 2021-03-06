@@ -4,7 +4,7 @@ namespace Warzone.Exceptions
 {
     public class NotLoggedInException : Exception
     {
-        private const string CustomMessage = "You can only log out if you are currently logged in.";
+        private const string CustomMessage = "Please log in before attempting this action";
 
         public NotLoggedInException()
             : base(CustomMessage)

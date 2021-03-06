@@ -1,23 +1,28 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Warzone.Authentication;
+using Warzone.Clients;
 using Warzone.Http;
 
 namespace Warzone
 {
     public class WarzoneClient : IWarzoneClient
     {
-        private const string BaseCookie = "new_SiteId=cod; ACT_SSO_LOCALE=en_US;country=US;XSRF-TOKEN=68e8b62e-1d9d-4ce1-b93f-cbe5ff31a041;API_CSRF_TOKEN=68e8b62e-1d9d-4ce1-b93f-cbe5ff31a041;";
-        private const string UserAgent = "a4b471be-4ad2-47e2-ba0e-e1f2aa04bff9";
-
         private readonly IAuthenticationHandler _authenticationHandler;
-        
+        private readonly ICodApiClient _codApiClient;
+
         public WarzoneClient()
         {
-            var httpService = new HttpService(BaseCookie, UserAgent);
-            _authenticationHandler = new AuthenticationHandler(httpService, BaseCookie);
+            var httpService = new HttpService();
+            _authenticationHandler = new AuthenticationHandler(httpService);
+            _codApiClient = new CodApiClient(_authenticationHandler, httpService);
         }
 
         public Task<bool> LoginAsync(string email, string password) =>
             _authenticationHandler.LoginAsync(email, password);
+
+        public Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+            CancellationToken? cancellationToken = null) =>
+            _codApiClient.GetLastTwentyWarzoneMatchesAsync(playerName, platform, cancellationToken);
     }
 }
