@@ -9,8 +9,7 @@ namespace Warzone.Http
 {
     public class HttpService : IHttpService
     {
-        private static HttpClient _httpClient;
-
+        private readonly HttpClient _httpClient;
         private readonly Dictionary<string, string> _baseHeaders;
 
         public HttpService()
