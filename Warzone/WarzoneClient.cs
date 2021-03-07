@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Warzone.Authentication;
 using Warzone.Clients;
 using Warzone.Http;
+using Warzone.Models.CodApi;
 
 namespace Warzone
 {
@@ -21,8 +22,11 @@ namespace Warzone
         public Task<bool> LoginAsync(string email, string password) =>
             _authenticationHandler.LoginAsync(email, password);
 
-        public Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
-            CancellationToken? cancellationToken = null) =>
-            _codApiClient.GetLastTwentyWarzoneMatchesAsync(playerName, platform, cancellationToken);
+        public async Task<Summaries> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+            CancellationToken? cancellationToken = null)
+        {
+            var result = await _codApiClient.GetLastTwentyWarzoneMatchesAsync(playerName, platform, cancellationToken);
+            return result.Data.Summary;
+        }
     }
 }

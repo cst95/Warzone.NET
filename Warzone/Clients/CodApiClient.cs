@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Warzone.Constants;
 using Warzone.Http;
+using Warzone.Models.CodApi;
 
 namespace Warzone.Clients
 {
@@ -47,7 +48,7 @@ namespace Warzone.Clients
             return true;
         }
 
-        public async Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+        public async Task<ResponseWrapper<SummariesWrapper>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
             CancellationToken? cancellationToken)
         {
             if (!Platforms.IsValid(platform))
@@ -61,9 +62,9 @@ namespace Warzone.Clients
             var url =
                 $"{BaseUrl}crm/cod/{Versions.V2}/title/{Titles.Warzone}/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/0/end/0/details";
 
-            var response = await _httpService.GetAsync<object>(url, null, cancellationToken);
+            var response = await _httpService.GetAsync<ResponseWrapper<SummariesWrapper>>(url, null, cancellationToken);
 
-            return response;
+            return response.Success ? response.Content : null;
         }
 
         private static string ParseXsrfTokenFromHeaders(HttpResponseHeaders headers)

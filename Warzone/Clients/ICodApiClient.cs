@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Warzone.Models.CodApi;
 
 namespace Warzone.Clients
 {
@@ -7,7 +8,7 @@ namespace Warzone.Clients
     {
         Task<string> FetchXsrfTokenAsync(CancellationToken? cancellationToken = null);
 
-        Task<object> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+        Task<ResponseWrapper<SummariesWrapper>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
             CancellationToken? cancellationToken);
 
         Task<bool> LoginAsync(string email, string password, string xsrfToken,
