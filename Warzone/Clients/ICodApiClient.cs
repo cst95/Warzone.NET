@@ -8,10 +8,10 @@ namespace Warzone.Clients
     {
         Task<string> FetchXsrfTokenAsync(CancellationToken? cancellationToken = null);
 
-        Task<ResponseWrapper<SummariesWrapper>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
-            CancellationToken? cancellationToken);
-
         Task<bool> LoginAsync(string email, string password, string xsrfToken,
             CancellationToken? cancellationToken = null);
+
+        Task<CodApiResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+            CancellationToken? cancellationToken);
     }
 }
