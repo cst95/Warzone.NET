@@ -18,11 +18,6 @@ namespace Warzone.Http
             Dictionary<string, string> headersToAdd = null,
             CancellationToken? cancellationToken = null);
 
-        Task<HttpResponse<TResponse>> PostAsync<TResponse>(string resourceUrl,
-            HttpContent content,
-            Dictionary<string, string> headersToAdd,
-            CancellationToken? cancellationToken) where TResponse : class;
-
         void UpdateDefaultHeaders(string key, IEnumerable<string> value);
     }
 }

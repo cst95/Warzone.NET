@@ -4,8 +4,10 @@ namespace Warzone.Models.Http
 {
     public class HttpResponse<T> : BaseHttpResponse where T : class
     {
-        public HttpResponse() {}
-        
+        public HttpResponse()
+        {
+        }
+
         public HttpResponse(BaseHttpResponse baseClass)
         {
             Headers = baseClass.Headers;
@@ -13,7 +15,7 @@ namespace Warzone.Models.Http
             ResponseContent = baseClass.ResponseContent;
             StatusCode = baseClass.StatusCode;
         }
-        
+
         public T Content { get; set; }
 
         public Error Error { get; set; }

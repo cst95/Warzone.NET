@@ -97,33 +97,7 @@ namespace Warzone.Http
 
             var deserializedResponse = DeserializeResponseFromApi<ResponseWrapper<TResponse>>(contents);
 
-            // TODO: Stil serializes as Response data even if success is false.
-            
             if (deserializedResponse != null && !contents.Contains("\"status\":\"error\""))
-                clientResponse.Content = deserializedResponse.Data;
-            else
-            {
-                var error = DeserializeResponseFromApi<ResponseWrapper<Error>>(contents);
-                clientResponse.Error = error.Data;
-            }
-
-            return clientResponse;
-        }
-
-        public async Task<HttpResponse<TResponse>> PostAsync<TResponse>(string resourceUrl, HttpContent content,
-            Dictionary<string, string> headersToAdd = null,
-            CancellationToken? cancellationToken = null) where TResponse : class
-        {
-            var clientResponse =
-                new HttpResponse<TResponse>(await PostAsync(resourceUrl, content, headersToAdd, cancellationToken));
-
-            var contents = cancellationToken.HasValue
-                ? await clientResponse.ResponseContent.ReadAsStringAsync(cancellationToken.Value)
-                : await clientResponse.ResponseContent.ReadAsStringAsync();
-
-            var deserializedResponse = DeserializeResponseFromApi<ResponseWrapper<TResponse>>(contents);
-
-            if (deserializedResponse != null)
                 clientResponse.Content = deserializedResponse.Data;
             else
             {

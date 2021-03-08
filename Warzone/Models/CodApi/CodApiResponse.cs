@@ -9,6 +9,5 @@ namespace Warzone.Models.CodApi
         public T Data { get; set; }
         public Error Error { get; set; }
         public bool IsError => Data == null && Error != null;
-        
     }
 }

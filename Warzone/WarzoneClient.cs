@@ -26,9 +26,12 @@ namespace Warzone
         public Task<bool> LoginAsync(string email, string password) =>
             _authenticationHandler.LoginAsync(email, password);
 
-        public async Task<WarzoneResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+        public async Task<WarzoneResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName,
+            string platform,
             CancellationToken? cancellationToken = null)
         {
+            if (!_authenticationHandler.LoggedIn) throw new NotLoggedInException();
+
             var result = await _codApiClient.GetLastTwentyWarzoneMatchesAsync(playerName, platform, cancellationToken);
 
             CheckResultForFailure(result);
@@ -43,7 +46,7 @@ namespace Warzone
         private static void CheckResultForFailure<T>(CodApiResponse<T> result)
         {
             if (result.Success) return;
-            
+
             if (result.StatusCode == HttpStatusCode.Unauthorized)
             {
                 throw new NotLoggedInException();
