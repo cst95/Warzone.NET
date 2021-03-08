@@ -27,7 +27,7 @@ namespace Warzone.Clients
 
         public async Task<string> FetchXsrfTokenAsync(CancellationToken? cancellationToken = null)
         {
-            var initialResponse = await _httpService.GetAsync<object>(CsrfTokenUrl, null, cancellationToken);
+            var initialResponse = await _httpService.GetAsync(CsrfTokenUrl, null, cancellationToken);
 
             return !initialResponse.Success ? null : ParseXsrfTokenFromHeaders(initialResponse.Headers);
         }
@@ -35,7 +35,7 @@ namespace Warzone.Clients
         public async Task<bool> LoginAsync(string email, string password, string xsrfToken,
             CancellationToken? cancellationToken = null)
         {
-            var loginResponse = await _httpService.PostAsync<object>(LoginUrl,
+            var loginResponse = await _httpService.PostAsync(LoginUrl,
                 GetLoginContent(email, password, xsrfToken),
                 new Dictionary<string, string>() {{"Cookie", $"XSRF-TOKEN={xsrfToken}"}}, cancellationToken);
 
@@ -48,7 +48,8 @@ namespace Warzone.Clients
             return true;
         }
 
-        public async Task<ResponseWrapper<SummariesWrapper>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
+        public async Task<CodApiResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName,
+            string platform,
             CancellationToken? cancellationToken)
         {
             if (!Platforms.IsValid(platform))
@@ -62,9 +63,15 @@ namespace Warzone.Clients
             var url =
                 $"{BaseUrl}crm/cod/{Versions.V2}/title/{Titles.Warzone}/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/0/end/0/details";
 
-            var response = await _httpService.GetAsync<ResponseWrapper<SummariesWrapper>>(url, null, cancellationToken);
+            var response = await _httpService.GetAsync<SummariesWrapper>(url, null, cancellationToken);
 
-            return response.Success ? response.Content : null;
+            return new CodApiResponse<Summaries>
+            {
+                StatusCode = response.StatusCode,
+                Success = response.Success,
+                Error = response.Error,
+                Data = response.Content?.Summary
+            };
         }
 
         private static string ParseXsrfTokenFromHeaders(HttpResponseHeaders headers)

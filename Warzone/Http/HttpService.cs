@@ -3,7 +3,8 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Warzone.Models;
+using Warzone.Models.CodApi;
+using Warzone.Models.Http;
 
 namespace Warzone.Http
 {
@@ -32,9 +33,8 @@ namespace Warzone.Http
             ResetDefaultHeaders();
         }
 
-        public async Task<HttpResponse<T>> GetAsync<T>(string resourceUrl,
+        public async Task<BaseHttpResponse> GetAsync(string resourceUrl,
             Dictionary<string, string> headersToAdd = null, CancellationToken? cancellationToken = null)
-            where T : class
         {
             var request = new HttpRequestMessage(HttpMethod.Get, resourceUrl);
 
@@ -44,35 +44,12 @@ namespace Warzone.Http
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                return new HttpResponse<T>
-                {
-                    Success = false,
-                    Content = null,
-                    Headers = response.Headers,
-                    StatusCode = response.StatusCode
-                };
-            }
-
-            var contents = cancellationToken.HasValue
-                ? await response.Content.ReadAsStringAsync(cancellationToken.Value)
-                : await response.Content.ReadAsStringAsync();
-
-            var deserializedResponse = DeserializeResponseFromApi<T>(contents);
-
-            return new HttpResponse<T>
-            {
-                Success = true,
-                Content = deserializedResponse,
-                Headers = response.Headers,
-                StatusCode = response.StatusCode
-            };
+            return CheckResponse(response);
         }
 
-        public async Task<HttpResponse<TResponse>> PostAsync<TResponse>(string resourceUrl, HttpContent content,
+        public async Task<BaseHttpResponse> PostAsync(string resourceUrl, HttpContent content,
             Dictionary<string, string> headersToAdd = null,
-            CancellationToken? cancellationToken = null) where TResponse : class
+            CancellationToken? cancellationToken = null)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, resourceUrl) {Content = content};
 
@@ -82,31 +59,56 @@ namespace Warzone.Http
                 ? await _httpClient.SendAsync(request, cancellationToken.Value)
                 : await _httpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode && (int)response.StatusCode != 302)
+            return CheckResponse(response);
+        }
+
+        private BaseHttpResponse CheckResponse(HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode && (int) response.StatusCode != 302)
             {
-                return new HttpResponse<TResponse>
+                return new BaseHttpResponse
                 {
                     Success = false,
-                    Content = null,
-                    Headers = response.Headers
+                    Headers = response.Headers,
+                    StatusCode = response.StatusCode,
+                    ResponseContent = response.Content
                 };
             }
 
-            var contents = cancellationToken.HasValue
-                ? await response.Content.ReadAsStringAsync(cancellationToken.Value)
-                : await response.Content.ReadAsStringAsync();
-
-            var deserializedResponse = DeserializeResponseFromApi<TResponse>(contents);
-
-            return new HttpResponse<TResponse>()
+            return new BaseHttpResponse
             {
                 Success = true,
-                Content = deserializedResponse,
-                Headers = response.Headers
+                Headers = response.Headers,
+                StatusCode = response.StatusCode,
+                ResponseContent = response.Content
             };
         }
 
-        public void ResetDefaultHeaders()
+        public async Task<HttpResponse<TResponse>> GetAsync<TResponse>(string resourceUrl,
+            Dictionary<string, string> headersToAdd = null, CancellationToken? cancellationToken = null)
+            where TResponse : class
+        {
+            var clientResponse =
+                new HttpResponse<TResponse>(await GetAsync(resourceUrl, headersToAdd, cancellationToken));
+
+            var contents = cancellationToken.HasValue
+                ? await clientResponse.ResponseContent.ReadAsStringAsync(cancellationToken.Value)
+                : await clientResponse.ResponseContent.ReadAsStringAsync();
+
+            var deserializedResponse = DeserializeResponseFromApi<ResponseWrapper<TResponse>>(contents);
+
+            if (deserializedResponse != null && !contents.Contains("\"status\":\"error\""))
+                clientResponse.Content = deserializedResponse.Data;
+            else
+            {
+                var error = DeserializeResponseFromApi<ResponseWrapper<Error>>(contents);
+                clientResponse.Error = error.Data;
+            }
+
+            return clientResponse;
+        }
+
+        private void ResetDefaultHeaders()
         {
             _httpClient.DefaultRequestHeaders.Remove("Cookie");
 
@@ -116,19 +118,19 @@ namespace Warzone.Http
             }
         }
 
-        public void UpdateDefaultHeaders(string key, string value)
-        {
-            _httpClient.DefaultRequestHeaders.Remove(key);
-            _httpClient.DefaultRequestHeaders.Add(key, value);
-        }
-        
         public void UpdateDefaultHeaders(string key, IEnumerable<string> value)
         {
             _httpClient.DefaultRequestHeaders.Remove(key);
             _httpClient.DefaultRequestHeaders.Add(key, value);
         }
 
-        private void AddHeaders(HttpRequestMessage request, Dictionary<string, string> headersToAdd)
+        private void UpdateDefaultHeaders(string key, string value)
+        {
+            _httpClient.DefaultRequestHeaders.Remove(key);
+            _httpClient.DefaultRequestHeaders.Add(key, value);
+        }
+
+        private static void AddHeaders(HttpRequestMessage request, Dictionary<string, string> headersToAdd)
         {
             foreach (var (key, value) in headersToAdd)
             {
