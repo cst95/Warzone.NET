@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Warzone.Models.CodApi;
 
@@ -13,5 +14,8 @@ namespace Warzone.Clients
 
         Task<CodApiResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName, string platform,
             CancellationToken? cancellationToken);
+
+        Task<CodApiResponse<Summaries>> GetWarzoneMatchesAsync(string playerName, string platform,
+            DateTime? startTime, DateTime? endTime, CancellationToken? cancellationToken);
     }
 }
