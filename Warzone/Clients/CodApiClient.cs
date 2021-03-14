@@ -67,6 +67,37 @@ namespace Warzone.Clients
             };
         }
 
+        public async Task<CodApiResponse<Summaries>> GetWarzoneMatchesAsync(string playerName, string platform,
+            DateTime? startTime, DateTime? endTime, CancellationToken? cancellationToken)
+        {
+            var safePlayerName = ValidateParams(platform, playerName);
+            
+            if (startTime > endTime || endTime < startTime || startTime > DateTime.Now || endTime > DateTime.Now)
+                throw new ArgumentOutOfRangeException(nameof(startTime));
+            
+            if (endTime < startTime || endTime > DateTime.Now)
+                throw new ArgumentOutOfRangeException(nameof(endTime));
+
+            DateTime? newStartTime = startTime ?? DateTime.UtcNow.AddHours(-24);
+            DateTime? newEndTime = endTime ?? DateTime.UtcNow;
+
+            var unixStartTime = ((DateTimeOffset) newStartTime).ToUnixTimeMilliseconds();
+            var unixEndTime = ((DateTimeOffset) newEndTime).ToUnixTimeMilliseconds();
+
+            var url =
+                $"{BaseUrl}crm/cod/{Versions.V2}/title/mw/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/{unixStartTime}/end/{unixEndTime}/details";
+
+            var response = await _httpService.GetAsync<SummariesWrapper>(url, null, cancellationToken);
+            
+            return new CodApiResponse<Summaries>
+            {
+                StatusCode = response.StatusCode,
+                Success = response.Success,
+                Error = response.Error,
+                Data = response.Content?.Summary
+            };
+        }
+
         private string ValidateParams(string platform, string playerName)
         {
             if (!Platforms.IsValid(platform))
