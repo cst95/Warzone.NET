@@ -43,6 +43,22 @@ namespace Warzone
             };
         }
 
+        public async Task<WarzoneResponse<Summaries>> GetWarzoneMatchesAsync(string playerName, string platform, DateTime? startTime = null, DateTime? endTime = null,
+            CancellationToken? cancellationToken = null)
+        {
+            if (!_authenticationHandler.LoggedIn) throw new NotLoggedInException();
+
+            var result = await _codApiClient.GetWarzoneMatchesAsync(playerName, platform, startTime, endTime, cancellationToken);
+
+            CheckResultForFailure(result);
+
+            return new WarzoneResponse<Summaries>
+            {
+                Data = result.Data,
+                ErrorMessage = result.Error?.Message
+            };
+        }
+
         private static void CheckResultForFailure<T>(CodApiResponse<T> result)
         {
             if (result.Success) return;
