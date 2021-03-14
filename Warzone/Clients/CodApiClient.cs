@@ -52,14 +52,7 @@ namespace Warzone.Clients
             string platform,
             CancellationToken? cancellationToken)
         {
-            if (!Platforms.IsValid(platform))
-                throw new ArgumentOutOfRangeException(nameof(platform));
-            if (string.IsNullOrWhiteSpace(playerName))
-                throw new ArgumentException("Value cannot be null or whitespace.", nameof(playerName));
-            if (string.IsNullOrWhiteSpace(platform))
-                throw new ArgumentException("Value cannot be null or whitespace.", nameof(platform));
-
-            var safePlayerName = HttpUtility.HtmlEncode(playerName);
+            var safePlayerName = ValidateParams(platform, playerName);
             var url =
                 $"{BaseUrl}crm/cod/{Versions.V2}/title/{Titles.Warzone}/platform/{platform}/gamer/{safePlayerName}/matches/wz/start/0/end/0/details";
 
@@ -72,6 +65,18 @@ namespace Warzone.Clients
                 Error = response.Error,
                 Data = response.Content?.Summary
             };
+        }
+
+        private string ValidateParams(string platform, string playerName)
+        {
+            if (!Platforms.IsValid(platform))
+                throw new ArgumentOutOfRangeException(nameof(platform));
+            if (string.IsNullOrWhiteSpace(playerName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(playerName));
+            if (string.IsNullOrWhiteSpace(platform))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(platform));
+
+            return HttpUtility.HtmlEncode(playerName);
         }
 
         private static string ParseXsrfTokenFromHeaders(HttpResponseHeaders headers)

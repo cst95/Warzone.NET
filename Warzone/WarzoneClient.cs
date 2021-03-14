@@ -25,7 +25,7 @@ namespace Warzone
 
         public Task<bool> LoginAsync(string email, string password) =>
             _authenticationHandler.LoginAsync(email, password);
-
+        
         public async Task<WarzoneResponse<Summaries>> GetLastTwentyWarzoneMatchesAsync(string playerName,
             string platform,
             CancellationToken? cancellationToken = null)
@@ -39,7 +39,7 @@ namespace Warzone
             return new WarzoneResponse<Summaries>
             {
                 Data = result.Data,
-                ErrorMessage = result.Error.Message
+                ErrorMessage = result.Error?.Message
             };
         }
 
