@@ -21,3 +21,4 @@ If your login session has expired this method will throw a `NotLoggedInException
 
 ## Current features
 - Summarized data for the user's last twenty Warzone games - `GetLastTwentyWarzoneMatchesAsync` (Only standard BR gamemodes)
+- Summarized data for the user's Warzone games between a start and end date `GetWarzoneMatchesAsync` (Only standard BR gamemodes)
