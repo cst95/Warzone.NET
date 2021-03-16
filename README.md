@@ -1,4 +1,4 @@
-![Nuget](https://img.shields.io/nuget/v/Warzone.NET)
+[![Nuget](https://img.shields.io/nuget/v/Warzone.NET)](https://www.nuget.org/packages/Warzone.NET/)
 
 # Warzone.NET
 A C# wrapper around the Call of Duty API, primarily focussed on allowing users to fetch Warzone related data.
