@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>net5.0</TargetFramework>
+        <Description>A C# wrapper around the Call of Duty API</Description>
+        <PackageId>Warzone.NET</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>cst95</Authors>
+        <RepositoryUrl>https://github.com/cst95/Warzone.NET</RepositoryUrl>
     </PropertyGroup>
-
+    
 </Project>
